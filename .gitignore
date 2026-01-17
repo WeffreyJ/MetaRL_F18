@@ -1,0 +1,35 @@
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# --- OS / editors ---
+.DS_Store
+.vscode/
+.idea/
+
+# --- Outputs / experiments ---
+runs/
+*.csv
+*.png
+*.zip
+*.log
+
+# --- Simulink / build artifacts (keep repo clean) ---
+*.o
+*.a
+*.so
+*.dylib
+*.mex*
+*.mat
+html/
+slprj/
+tmwinternal/
+*_grt_rtw/
+*_ert_rtw/
+
+# --- backups ---
+_custom_backup/
+custom/

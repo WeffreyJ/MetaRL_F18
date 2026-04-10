@@ -1,11 +1,12 @@
 import ctypes
+import os
+import sys
 from pathlib import Path
 
 
 class F18Sim:
     def __init__(self, lib_path=None):
         self._handle = None
-        self._lib = None
         self._lib = ctypes.CDLL(str(self._resolve_lib_path(lib_path)))
         self._bind()
         self._handle = self._lib.f18_create()
@@ -15,14 +16,45 @@ class F18Sim:
 
     def _resolve_lib_path(self, lib_path):
         if lib_path:
-            return Path(lib_path)
-        env_path = Path.cwd() / "python" / "f18sim" / "libf18sim.dylib"
-        if env_path.exists():
-            return env_path
-        here = Path(__file__).resolve().parent / "libf18sim.dylib"
-        if here.exists():
-            return here
-        raise FileNotFoundError("libf18sim.dylib not found. Build with f18_wrap.mk.")
+            p = Path(str(lib_path))
+            if p.exists():
+                return p
+            return str(lib_path)
+
+        env_lib = os.environ.get("F18SIM_LIB", "").strip()
+        if env_lib:
+            p = Path(env_lib)
+            if p.exists():
+                return p
+            return env_lib
+
+        if sys.platform.startswith("win"):
+            names = ["f18sim.dll", "libf18sim.dll"]
+        elif sys.platform == "darwin":
+            names = ["libf18sim.dylib", "f18sim.dylib"]
+        else:
+            names = ["libf18sim.so", "f18sim.so", "libf18sim.dylib"]
+
+        roots = [
+            Path.cwd() / "f18_sim" / "python" / "f18sim",
+            Path.cwd() / "python" / "f18sim",
+            Path.cwd() / "f18sim",
+            Path(__file__).resolve().parent,
+            Path.cwd(),
+            Path.cwd() / "f18_sim",
+        ]
+
+        for root in roots:
+            for name in names:
+                p = root / name
+                if p.exists():
+                    return p
+
+        raise FileNotFoundError(
+            "F-18 sim shared library not found. Searched for "
+            f"{names}. Build via `make -f f18_sim/f18_wrap.mk` (macOS/Linux) "
+            "or CMake in `f18_sim/` (Windows), or set F18SIM_LIB to the library path."
+        )
 
     def _bind(self):
         self._lib.f18_create.restype = ctypes.c_void_p
@@ -81,9 +113,6 @@ class F18Sim:
             return
         buf = (ctypes.c_double * len(state))(*state)
         self._lib.f18_reset(self._handle, buf, len(state))
-
-    def step(self):
-        self._lib.f18_step(self._handle)
 
     def get_state(self):
         n = self._lib.f18_get_num_states()
